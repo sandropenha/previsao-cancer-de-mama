@@ -1,6 +1,6 @@
 ## PREVISÃO DE OCORRÊNCIA DE CÂNCER DE MAMA
 
-![LINK](https://github.com/sandropenha/previsao-cancer-de-mama/tree/master/img/fita-de-cracha-rosa-no-peito-de-mulher-para-apoiar-a-causa-do-cancer-de-mama-cuidados-de-saude_53476-4035.jpg)
+![LINK](https://github.com/sandropenha/previsao-cancer-de-mama/blob/master/img/fita-de-cracha-rosa-no-peito-de-mulher-para-apoiar-a-causa-do-cancer-de-mama-cuidados-de-saude_53476-4035.jpg)
 
 **[VER NOTEBOOK](https://htmlpreview.github.io/?https://raw.githubusercontent.com/sandropenha/previsao-cancer-de-mama/master/scripts/prevendo_cancer_de_mama_notebook.html)** | **[VER DATASET](http://archive.ics.uci.edu/ml/machine-learning-databases/breast-cancer-wisconsin)**
 
@@ -12,7 +12,7 @@ Neste projeto, iremos investigar a utilidade da aprendizagem de máquina para de
 ## Apresentação de Resultado:
 
 #### MODELO DE CLASSIFICAÇÃO:
-![modelo](https://github.com/sandropenha/prevendo-cancer-de-mama/blob/master/modelo-previsao-cancer.png)
+![modelo](https://github.com/sandropenha/previsao-cancer-de-mama/blob/master/img/modelo-previsao-cancer.png)
 
 
 
