@@ -1,0 +1,199 @@
+---
+title: "Previsão de Câncer de mama"
+output:
+  html_document:
+    df_print: paged
+---
+
+
+#### **Sobre:**
+ 
+
+
+O câncer de mama, é atualmente um dos tipos de câncer mais mortais. Iremos investigar a utilidade da aprendizagem de máquina para detecção de tumores malignos ou benignos, aplicando técnicas de machine learning e data science utilizando do repositório de Machine Learning da UCI
+
+http://archive.ics.uci.edu/ml/machine-learning-databases/breast-cancer-wisconsin/wdbc.names 
+
+Os dados presentes no datase tratam-se de dados reais.
+
+
+#### **Diretório de trabalho:**
+```{r diretorio}
+setwd('E:/projetos/previsao_cancer_de_mama')
+```
+
+#### **Librarys:**
+```{r librarys}
+pacman::p_load(tidyverse,class,caTools,gmodels,DMwR,caret,e1071,knitr)
+```
+
+#### **Dataset:**
+```{r dataset}
+df <- read.csv("dataset.csv")
+glimpse(df)
+```
+
+Todos os dados do dataset são numéricos, com exceção da variável "diagnosis" cuja é um classificador que indicará se o conjunto de dados apontam para um tipo de câncer "benigno" ou "maligno".
+
+#### **Ajustando os dados:**
+
+```{r ajustando os dados}
+df <- df %>% select(-id) %>% 
+  mutate(diagnosis = factor(diagnosis, levels = c("B","M"), labels = c(0,1))) %>% 
+  mutate_if(is.numeric,scale)
+```
+Neste ponto, foi realizado o ajuste no dataset. 
+
+Realizamos a padronização das variáveis numéricas com o "scale" e além disso foi transformado a variável "diagnosis" (variável target) em "fator" com atribuição das labels 0 e 1, onde 0 = benigno e 1 = maligno.
+
+#### **Verificando a proporção:**
+```{r prop}
+round(prop.table(table(df$diagnosis))*100,2)
+ggplot(df, aes(x = diagnosis))+
+  geom_bar(fill = "Steelblue")+
+  labs(title = "Proporção de tipo de câncer")+
+  theme_minimal()
+```
+
+Também se faz necessário verificar o balanceamento dos dados para que o modelo seja suficientemente genérico. Neste caso, há uma proporção de 62% dos dados para "Benigno" e 37% para "Maligno". Realizaremos o balanceamento utilizando o algoritmo SMOTE.
+
+#### **Aplicando balanceamento:**
+```{r df2, warning=FALSE}
+set.seed(123)
+df2 <- DMwR::SMOTE(diagnosis~.,df, perc.over = 900,perc.under = 100)
+round(prop.table(table(df2$diagnosis))*100,2)
+```
+
+#### **Dividindo dados de treino e de teste:**
+```{r treino e teste}
+set.seed(123)
+treino <- df2 %>% sample_frac(0.7)
+teste <- df2 %>% sample_frac(0.3)
+```
+
+#### **Verificando balanceamento nos dados de treino e de teste:**
+```{r verificando}
+set.seed(123)
+round(prop.table(table(treino$diagnosis))*100,2)
+round(prop.table(table(teste$diagnosis))*100,2)
+```
+
+Utilizando ainda do mesmo princípio de balanceamento dos dados, é possível ver que o dataset de "treino e de "teste" estão balanceados.
+
+#### **Modelo preditivo com o KNN:**
+
+```{r arquivo}
+set.seed(123)
+ctrl <- trainControl(method = "repeatedcv", repeats = 3)
+```
+
+```{r}
+set.seed(123)
+knn_v1 <- caret::train(diagnosis~.,
+                       data = treino,
+                       method = "knn",
+                       trControl = ctrl,
+                       tuneLength = 20)
+
+
+plot(knn_v1)
+
+```
+
+O plot acima mostra qual o valor de K ideal que foi utilizado.
+
+#### **Previsões:**
+```{r previsoes}
+set.seed(123)
+previsao_knn <- predict(knn_v1,newdata=teste)
+confusionMatrix(previsao_knn,teste$diagnosis)
+```
+
+- 0,99 de acurácia;
+- Onde era 0, acertou 569 e errou 0;
+- Onde era 1, acertou 637 e errou 2.
+
+
+#### **Modelo knn com métrica ROC:**
+```{r controle}
+set.seed(123)
+controle <- trainControl(method = "repeatedcv",
+                         repeats =3,
+                         classProbs = TRUE,
+                         summaryFunction = twoClassSummary)
+
+df3 <- df2 %>% mutate(diagnosis = factor(diagnosis,levels = c("0","1"), labels = c("Benigno","Maligno")))
+treino2 <- df3 %>%  sample_frac(0.7)
+teste2 <- df3 %>% sample_frac(0.3)
+
+knn_v2 <- caret::train(diagnosis~.,
+                       data = treino2,
+                       method = "knn",
+                       trControl = controle,
+                       metric = "ROC",
+                       tuneLength = 20)
+
+plot(knn_v2)
+```
+
+O plot acima mostra qual o valor de K ideal que foi utilizado.
+
+
+#### **Previsões:**
+```{r}
+set.seed(123)
+previsao_knn2 <- predict(knn_v2,teste2[-1])
+confusionMatrix(previsao_knn2,teste2$diagnosis)
+```
+
+- 0.99 de acurácia;
+- Onde era Benigno acertou 561 e errou 6;
+- Onde era Maligno acertou 631 e errou 10.
+
+
+#### **Modelo preditivo com o Naive Bayes:**
+```{r}
+set.seed(123)
+modelo_naive <- naiveBayes(x = treino[-1],y=treino$diagnosis)
+previsao <- predict(modelo_naive,teste[-1])
+conf.matrix <- table(teste[,1],previsao)
+confusionMatrix(conf.matrix)
+```
+
+- 0.93 de acurácia;
+- Onde era 0 acertou 555 e errou 1;
+- Onde era 1 acertou 574 e errou 63
+
+
+#### **Modelo preditivo com regressão logística:**
+```{r, warning=FALSE}
+set.seed(123)
+control <- trainControl(method = "repeatedcv", number = 10, repeats = 2)
+modelo_reg_log <- train(diagnosis~., data = treino, method = "glm", trControl = control)
+```
+
+#### **Visualizando variáveis mais importantes:**
+```{r}
+set.seed(123)
+importance <- varImp(modelo_reg_log, scale = FALSE);plot(importance)
+```
+
+#### **Fazendo previsões:**
+```{r}
+set.seed(123)
+previsoes <- predict(modelo_reg_log, teste[-1])
+```
+
+#### **Avaliando o modelo:**
+```{r}
+set.seed(123)
+confusionMatrix(table(data = previsoes, reference = teste[,1]), positive = "1")
+```
+
+- 100% de acurácia;
+- Onde era 0 acertou 571 e errou 0;
+- Onde era 1 acertou 637 e errou 0.
+
+O Modelo com regressão logística acertou 100% dos dados, ou seja, não tivemos nenhum falso positivo e nenhum falso negativo, o que é ótimo devido ao contexto do dataset tratar de diagnóstico de câncer de mama.
+
+
